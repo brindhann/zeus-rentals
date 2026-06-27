@@ -1,0 +1,1104 @@
+---------------FRONT END---------------
+---------------Home.jsx---------------
+
+
+
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarRange, Phone, Mail, MapPin, Clock } from 'lucide-react';
+
+function Home() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen flex flex-col justify-between animate-fade-in">
+      <div className="max-w-5xl mx-auto px-6 py-16 flex flex-col lg:flex-row items-center justify-center gap-12 flex-grow">
+        
+        <div className="text-center lg:text-left flex-1 space-y-6">
+          <h1 className="text-6xl md:text-7xl font-black text-[var(--brand-main)] tracking-tight uppercase">
+            Zeus Rentals
+          </h1>
+          <div className="text-4xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
+            The affordable way to explore the city.
+          </div>
+          <p className="text-xl font-semibold text-slate-500 max-w-lg">
+            Rent pristine cars and bikes around Shillong with zero security deposit headaches.
+          </p>
+        </div>
+
+        <div className="w-full max-w-md bg-white border-4 border-slate-200 rounded-3xl p-8 shadow-sm space-y-6">
+          <div className="flex items-center space-x-4 p-4 border-2 border-slate-100 rounded-2xl bg-slate-50">
+            <div className="bg-emerald-50 p-3 rounded-xl border-2 border-emerald-100 text-[var(--brand-main)]">
+              <CalendarRange className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="font-extrabold text-slate-800">Instant Online Booking</div>
+              <div className="text-xs font-bold text-slate-400">Select dates and reserve your ride smoothly.</div>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => navigate('/fleet')}
+            className="duo-btn-primary w-full py-4 font-black text-xl rounded-2xl tracking-wide uppercase cursor-pointer"
+          >
+            Book your ride
+          </button>
+        </div>
+      </div>
+
+      <footer className="bg-white border-t-4 border-slate-200 py-10 px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-slate-600 font-semibold">
+          <div className="space-y-3">
+            <h4 className="font-black text-slate-800 uppercase tracking-wider">Zeus Rentals HQ</h4>
+            <p className="flex items-start gap-2">
+              <MapPin className="w-5 h-5 text-[var(--brand-main)] shrink-0 mt-0.5" />
+              <span>House no 001, Laitumkhrah,<br />Shillong, Meghalaya 793003</span>
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-black text-slate-800 uppercase tracking-wider">Contact & Support</h4>
+            <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-[var(--brand-main)]" /> +91 98765 43210</p>
+            <p className="flex items-center gap-2"><Mail className="w-4 h-4 text-[var(--brand-main)]" /> support@zeusrentals.com</p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-black text-slate-800 uppercase tracking-wider">Operational Hours</h4>
+            <p className="flex items-center gap-2"><Clock className="w-4 h-4 text-[var(--brand-main)]" /> Mon - Sun: 10:00 AM - 07:00 PM</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default Home;
+
+
+
+
+
+
+
+
+
+---------------Fleet.jsx---------------
+
+
+
+
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useRental } from '../context/RentalContext';
+import { 
+  Calendar, User, ShieldCheck, CreditCard, Upload, X, Frown, Car, Bike, ArrowLeft, 
+  MapPin, Phone, Mail, Clock, ShieldAlert 
+} from 'lucide-react';
+
+function Fleet() {
+  const navigate = useNavigate();
+  const { vehicles, checkVehicleAvailability, API_BASE_URL } = useRental();
+  const [activeVehicle, setActiveVehicle] = useState(null);
+  const [step, setStep] = useState(1); 
+  
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [customerInfo, setCustomerInfo] = useState({ name: "", address: "", contact: "" });
+  const [files, setFiles] = useState({ govtId: null, license: null });
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const handleOpenModal = (vehicle) => {
+    setActiveVehicle(vehicle);
+    setStep(1);
+    setErrors({});
+    setStartDate("");
+    setEndDate("");
+    setCustomerInfo({ name: "", address: "", contact: "" });
+    setFiles({ govtId: null, license: null });
+    setAgreedToTerms(false);
+  };
+
+  const calculateDays = () => {
+    if (!startDate || !endDate) return 1;
+    const diffTime = new Date(endDate) - new Date(startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 ? diffDays + 1 : 1;
+  };
+
+  const totalDays = calculateDays();
+  const totalAmount = activeVehicle ? activeVehicle.price * totalDays : 0;
+  const advanceAmount = Math.round(totalAmount * 0.25);
+  const remainingAmount = totalAmount - advanceAmount;
+
+  const handleCheckDates = async () => {
+    let errs = {};
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (!startDate || !endDate) errs.dates = "Please pick your required dates.";
+    else if (startDate < todayStr) errs.dates = "Start date cannot be in the past.";
+    else if (startDate > endDate) errs.dates = "Return date must be after the start date.";
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    const isFree = await checkVehicleAvailability(activeVehicle.id, startDate, endDate);
+    if (!isFree) {
+      setErrors({ dates: "We are sorry, but this vehicle is already reserved for these dates. Please choose another date or browse alternative vehicles." });
+      return;
+    }
+
+    setErrors({});
+    setStep(2);
+  };
+
+  const handleVerifyDetails = (e) => {
+    e.preventDefault();
+    let errs = {};
+
+    if (!/^[a-zA-Z\s]{4,30}$/.test(customerInfo.name)) errs.name = "Please enter a valid name (min 4 characters).";
+    if (!/^\d{10}$/.test(customerInfo.contact)) errs.contact = "Please enter a valid 10-digit mobile number.";
+    if (customerInfo.address.trim().length < 10) errs.address = "Please enter a complete residential address.";
+    if (!files.govtId) errs.govtId = "Please upload a valid government ID copy.";
+    if (!files.license) errs.license = "Please upload a copy of your driver's license.";
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    setErrors({});
+    setStep(3); 
+  };
+
+  const finalizeBooking = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicle_id: activeVehicle.id,
+          customer_name: customerInfo.name,
+          customer_phone: customerInfo.contact,
+          customer_address: customerInfo.address,
+          start_date: startDate,
+          end_date: endDate
+        })
+      });
+      if (response.ok) {
+        setStep(5);
+      } else {
+        const errData = await response.json();
+        alert(`Request failed: ${errData.detail}`);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col justify-between bg-slate-50 animate-fade-in text-base">
+      <div className="max-w-6xl w-full mx-auto px-6 py-6 flex-grow space-y-8">
+        
+        {/* Top Navigation Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b-4 border-slate-200 pb-4 gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-slate-800 tracking-tight">Available vehicles</h1>
+            <p className="text-slate-500 font-bold text-base">Select dates and check structural fleet allocation options.</p>
+          </div>
+          <button 
+            onClick={() => navigate('/')}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border-4 border-slate-200 text-[var(--brand-main)] font-black text-base rounded-xl hover:bg-slate-100 shadow-sm cursor-pointer"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to Home</span>
+          </button>
+        </div>
+
+        {/* Vehicle Selection Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {vehicles.map((v) => (
+            <div key={v.id} className="bg-white border-4 border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-[var(--brand-main)] hover:-translate-y-1 transition-all duration-300 shadow-sm group">
+              <div>
+                <div className="flex justify-center text-slate-300 group-hover:text-[var(--brand-main)] transition-colors duration-300 my-6">
+                  {v.type === "Car" ? <Car className="w-16 h-16 stroke-[1.5]" /> : <Bike className="w-16 h-16 stroke-[1.5]" />}
+                </div>
+                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase border-2 border-slate-200">
+                  {v.type}
+                </span>
+                <h3 className="text-2xl font-black text-slate-800 mt-2">{v.name}</h3>
+              </div>
+              <div className="mt-6 space-y-4">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wide">Rate</span>
+                  <span className="text-2xl font-black text-slate-800">₹{v.price}<span className="text-xs text-slate-400 font-bold">/day</span></span>
+                </div>
+                <button onClick={() => handleOpenModal(v)} className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
+                  SELECT RIDE
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Interactive Booking Modal Context */}
+        {activeVehicle && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 backdrop-blur-sm p-4 pt-20 sm:pt-28 overflow-y-auto animate-fade-in">
+            <div className="bg-white border-4 border-slate-200 w-full max-w-lg rounded-3xl p-8 shadow-xl relative">
+        
+              {/* High-Visibility Red Close Badge */}
+              <button 
+                onClick={() => setActiveVehicle(null)} 
+                className="absolute -top-3 -right-3 z-10 bg-[var(--brand-danger)] hover:bg-[var(--brand-danger-dark)] text-white p-2.5 rounded-full shadow-lg border-2 border-white transition-colors duration-150 cursor-pointer"
+              >
+                <X className="w-5 h-5 stroke-[2.5]" />
+              </button>
+
+              {/* Progress Flow Metrics */}
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-6">
+                <div className="bg-[var(--brand-main)] h-full transition-all duration-300" style={{ width: `${(step / 5) * 100}%` }}></div>
+              </div>
+
+              {/* STEP 1: DATES */}
+              {step === 1 && (
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2"><Calendar className="text-[var(--brand-main)] w-6 h-6" /> Tell us the dates</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase mb-1">Pick Up Date</label>
+                      <input type="date" className="w-full border-4 border-slate-200 p-3 rounded-xl font-black focus:border-[var(--brand-main)] outline-none text-base bg-slate-50" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black text-slate-400 uppercase mb-1">Return Date</label>
+                      <input type="date" className="w-full border-4 border-slate-200 p-3 rounded-xl font-black focus:border-[var(--brand-main)] outline-none text-base bg-slate-50" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                    </div>
+                  </div>
+                  {errors.dates && (
+                    <div className="border-2 border-[var(--brand-danger)] bg-rose-50 p-4 rounded-xl flex items-start gap-2 text-[var(--brand-danger)]">
+                      <Frown className="w-5 h-5 shrink-0 mt-0.5" />
+                      <p className="font-bold text-sm leading-normal">{errors.dates}</p>
+                    </div>
+                  )}
+                  <button onClick={handleCheckDates} className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
+                    CHECK AVAILABILITY
+                  </button>
+                </div>
+              )}
+
+              {/* STEP 2: DETAILS */}
+              {step === 2 && (
+                <form onSubmit={handleVerifyDetails} className="space-y-4">
+                  <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2"><User className="text-[var(--brand-main)] w-6 h-6" /> Personal Information</h3>
+                  <p className="text-sm font-bold text-slate-400 bg-slate-50 border-2 border-slate-200 p-3 rounded-xl">Your Personal information is safe with us.</p>
+                  <div>
+                    <input type="text" placeholder="Your Full Name" className="w-full border-4 border-slate-200 p-3 rounded-xl font-black focus:border-[var(--brand-main)] outline-none text-base bg-slate-50" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
+                    {errors.name && <p className="text-[var(--brand-danger)] font-black text-xs mt-1 ml-1">{errors.name}</p>}
+                  </div>
+                  <div>
+                    <input type="text" placeholder="Contact Phone Number" className="w-full border-4 border-slate-200 p-3 rounded-xl font-black focus:border-[var(--brand-main)] outline-none text-base bg-slate-50" value={customerInfo.contact} onChange={e => setCustomerInfo({...customerInfo, contact: e.target.value})} />
+                    {errors.contact && <p className="text-[var(--brand-danger)] font-black text-xs mt-1 ml-1">{errors.contact}</p>}
+                  </div>
+                  <div>
+                    <textarea placeholder="Residential Address" rows="2" className="w-full border-4 border-slate-200 p-3 rounded-xl font-black focus:border-[var(--brand-main)] outline-none text-base bg-slate-50" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})}></textarea>
+                    {errors.address && <p className="text-[var(--brand-danger)] font-black text-xs mt-1 ml-1">{errors.address}</p>}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className={`flex flex-col items-center justify-center border-4 border-dashed p-3 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors ${files.govtId ? 'border-[var(--brand-main)] bg-emerald-50 text-[var(--brand-main)]' : 'border-slate-200 text-slate-400'}`}>
+                      <Upload className="w-5 h-5 mb-1" />
+                      <span className="text-xs font-black">{files.govtId ? "ID Attached" : "Upload Govt ID"}</span>
+                      <input type="file" className="hidden" onChange={e => setFiles({...files, govtId: e.target.files[0] || null})} />
+                    </label>
+                    <label className={`flex flex-col items-center justify-center border-4 border-dashed p-3 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors ${files.license ? 'border-[var(--brand-main)] bg-emerald-50 text-[var(--brand-main)]' : 'border-slate-200 text-slate-400'}`}>
+                      <Upload className="w-5 h-5 mb-1" />
+                      <span className="text-xs font-black">{files.license ? "License Attached" : "Upload Driving License"}</span>
+                      <input type="file" className="hidden" onChange={e => setFiles({...files, license: e.target.files[0] || null})} />
+                    </label>
+                  </div>
+                  <button type="submit" className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
+                    Proceed to payment
+                  </button>
+                </form>
+              )}
+
+              {/* STEP 3: TERMS & CONDITIONS */}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-black text-slate-900 flex items-center gap-2"><ShieldAlert className="text-[var(--brand-danger)] w-6 h-6" /> Rental Terms & Conditions</h3>
+                  <div className="bg-slate-50 border-4 border-slate-200 p-4 rounded-2xl h-40 overflow-y-auto text-sm text-slate-600 space-y-2 font-semibold leading-relaxed">
+                    <p>1. The rider must carry an original valid driving license during vehicle handover.</p>
+                    <p>2. Fuel charges are explicitly borne by the client. The vehicle must be returned with the same fuel level as dispatched.</p>
+                    <p>3. Any fines, traffic violations, or physical damage incurred during transit are the absolute responsibility of the customer.</p>
+                    <p>4. Delay in return beyond the scheduled hours will attract standard hourly penalties.</p>
+                  </div>
+                  <label className="flex items-center space-x-3 bg-slate-50 p-3 rounded-xl border-4 border-slate-200 cursor-pointer">
+                    <input type="checkbox" className="w-5 h-5 accent-[var(--brand-main)] rounded" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} />
+                    <span className="text-sm font-black text-slate-700">I read, understood, and agree to the rental terms.</span>
+                  </label>
+                  <button 
+                    disabled={!agreedToTerms}
+                    onClick={() => setStep(4)}
+                    className={`w-full py-3.5 text-white font-black rounded-xl text-base tracking-wide ${agreedToTerms ? 'duo-btn-primary cursor-pointer' : 'bg-slate-300 cursor-not-allowed border-none'}`}
+                  >
+                    CONTINUE
+                  </button>
+                </div>
+              )}
+
+              {/* STEP 4: BOOKING SUMMARY */}
+              {step === 4 && (
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-black text-slate-900 flex items-center gap-2"><CreditCard className="text-[var(--brand-main)] w-6 h-6" /> Booking Summary</h3>
+                  <div className="bg-slate-50 border-4 border-slate-200 p-5 rounded-2xl space-y-3 text-base font-black">
+                    <div className="flex justify-between text-slate-500"><span>Vehicle:</span><span className="text-slate-800">{activeVehicle.name}</span></div>
+                    <div className="flex justify-between text-slate-500"><span>Duration:</span><span className="text-slate-700">{totalDays} Day(s)</span></div>
+                    <hr className="border-b-2 border-slate-200" />
+                    <div className="flex justify-between text-slate-600"><span>Total Amount:</span><span className="text-slate-900">₹{totalAmount}</span></div>
+                    <div className="flex justify-between text-[var(--brand-main)] bg-emerald-50/50 p-2 rounded-xl border-2 border-emerald-100"><span>Advance to be Paid (25%):</span><span>₹{advanceAmount}</span></div>
+                    <div className="flex justify-between text-slate-600"><span>Remaining Amount on Pickup:</span><span className="text-slate-900">₹{remainingAmount}</span></div>
+                  </div>
+                  <button onClick={finalizeBooking} className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
+                    PROCEED TO PAYMENT
+                  </button>
+                </div>
+              )}
+
+              {/* STEP 5: CELEBRATION */}
+              {step === 5 && (
+                <div className="text-center space-y-4 py-6">
+                  <div className="inline-flex bg-emerald-50 text-[var(--brand-main)] p-4 rounded-full border-4 border-emerald-200 mb-1"><ShieldCheck className="w-12 h-12" /></div>
+                  <h3 className="text-3xl font-black text-slate-900">Booking Secured</h3>
+                  <p className="text-slate-500 font-extrabold text-base max-w-sm mx-auto leading-relaxed">
+                    Thank you for choosing us. Our team has received your request. We are kindly looking for your arrival.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Business Details Footer */}
+      <footer className="bg-white border-t-4 border-slate-200 py-10 px-6 mt-12">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-base text-slate-600 font-black">
+          <div className="space-y-3">
+            <h4 className="font-black text-slate-800 uppercase tracking-wider text-base">Zeus Rentals HQ</h4>
+            <p className="flex items-start gap-2">
+              <MapPin className="w-5 h-5 text-[var(--brand-main)] shrink-0 mt-0.5" />
+              <span>House no 001, Laitumkhrah,<br />Shillong, Meghalaya 793003</span>
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-black text-slate-800 uppercase tracking-wider text-base">Contact & Support</h4>
+            <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-[var(--brand-main)]" /> +91 98765 43210</p>
+            <p className="flex items-center gap-2"><Mail className="w-4 h-4 text-[var(--brand-main)]" /> support@zeusrentals.com</p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-black text-slate-800 uppercase tracking-wider text-base">Operational Hours</h4>
+            <p className="flex items-center gap-2"><Clock className="w-4 h-4 text-[var(--brand-main)]" /> Mon - Sun: 10:00 AM - 07:00 PM</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default Fleet;
+
+
+
+
+
+
+
+
+
+
+
+---------------Admin.jsx---------------
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import { useRental } from '../context/RentalContext';
+import { User, X, Calendar, Flame, Archive, AlertCircle, ChevronLeft, ChevronRight, CalendarDays, Trash2 } from 'lucide-react';
+
+function Admin() {
+  const { vehicles, activeBookings, historyBookings, refreshAdminData, API_BASE_URL, setActiveBookings, setHistoryBookings } = useRental();
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const [blockedDates, setBlockedDates] = useState([]);
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 6, 1)); // July 2026
+
+  useEffect(() => {
+    refreshAdminData();
+    if (vehicles.length > 0 && !selectedVehicleId) {
+      setSelectedVehicleId(vehicles[0].id);
+    }
+  }, [vehicles]);
+
+  useEffect(() => {
+    if (!selectedVehicleId) return;
+    fetch(`${API_BASE_URL}/availability/${selectedVehicleId}`)
+      .then(res => res.json())
+      .then(data => setBlockedDates(data))
+      .catch(err => console.error(err));
+  }, [selectedVehicleId, activeBookings]);
+
+  const formatToReadableDate = (dateString) => {
+    if (!dateString) return "";
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj)) return dateString;
+    return dateObj.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const generateMonthDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    return Array.from({ length: totalDaysInMonth }, (_, i) => {
+      const dayNum = i + 1;
+      const displayMonth = month + 1;
+      return `${year}-${displayMonth < 10 ? '0' + displayMonth : displayMonth}-${dayNum < 10 ? '0' + dayNum : dayNum}`;
+    });
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const toggleDateBlockout = async (dateStr) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/toggle-date`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicle_id: selectedVehicleId, date_string: dateStr })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.status === "blocked") {
+          setBlockedDates([...blockedDates, dateStr]);
+        } else {
+          setBlockedDates(blockedDates.filter(d => d !== dateStr));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleWorkflowAction = async (bookingId, actionStr) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/bookings/${bookingId}/action?action=${actionStr}`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        refreshAdminData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteActiveBookingLocally = (id) => {
+    setActiveBookings(activeBookings.filter(b => b.id !== id));
+  };
+
+  const deleteArchivedBookingLocally = (id) => {
+    setHistoryBookings(historyBookings.filter(h => h.id !== id));
+  };
+
+  const monthDaysArray = generateMonthDays();
+
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-6 space-y-10 animate-fade-in text-slate-800">
+      
+      <div className="flex justify-between items-center border-b-4 border-slate-200 pb-5">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Hubert's Hub</h1>
+          <p className="text-slate-400 font-extrabold text-sm tracking-wider uppercase mt-1">OPERATIONS CONTROL DESK</p>
+        </div>
+        <div className="bg-slate-100 border-4 border-slate-200 text-slate-700 px-5 py-2 rounded-xl font-black text-sm">
+          LIVE OPERATIONAL ENVIRONMENT
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-2xl font-black text-slate-700 flex items-center gap-2">
+              <Flame className="text-[var(--brand-main)] w-6 h-6" /> PRESENT CLIENT BOOKINGS
+            </h3>
+            
+            <div className="bg-white border-4 border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+              {activeBookings.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 font-bold text-base">No present client bookings found inside the database logs.</div>
+              ) : (
+                <div className="divide-y-4 divide-slate-100">
+                  {activeBookings.map((b) => {
+                    const vehicleName = vehicles.find(v => v.id === b.vehicle_id)?.name || "Vehicle";
+                    return (
+                      <div key={b.id} className="p-6 flex flex-col sm:flex-row justify-between sm:items-center gap-6 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start space-x-4">
+                          <div className="bg-slate-100 p-3 rounded-full text-slate-500 border-2 border-slate-200"><User className="w-5 h-5" /></div>
+                          <div className="space-y-1">
+                            <h4 className="font-black text-slate-900 text-lg">{b.customer_name}</h4>
+                            <p className="text-base font-extrabold text-slate-500">Phone: {b.customer_phone}</p>
+                            <p className="text-base font-bold text-[var(--brand-main)]">Assigned Vehicle: {vehicleName}</p>
+                            <p className="text-sm font-semibold text-slate-400">Address: {b.customer_address}</p>
+                            <div className="inline-flex items-center gap-2 mt-2 bg-slate-100 border-2 border-slate-200 px-3 py-1 rounded-xl text-xs font-black tracking-wide text-slate-700 uppercase">
+                              <CalendarDays className="w-4 h-4 text-[var(--brand-main)]" />
+                              <span>{formatToReadableDate(b.start_date)}</span>
+                              <span className="text-slate-400 font-normal">➔</span>
+                              <span>{formatToReadableDate(b.end_date)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-3 justify-end shrink-0">
+                          {b.status === "Pending Verification" ? (
+                            <>
+                              <button onClick={() => handleWorkflowAction(b.id, "DENY")} className="p-3 bg-slate-100 text-[var(--brand-danger)] rounded-xl border-2 border-slate-200 hover:bg-rose-50 cursor-pointer"><X className="w-5 h-5" /></button>
+                              <button onClick={() => handleWorkflowAction(b.id, "APPROVE")} className="px-5 py-3 duo-btn-primary text-sm font-black rounded-xl tracking-wide cursor-pointer">APPROVE</button>
+                            </>
+                          ) : (
+                            <button onClick={() => handleWorkflowAction(b.id, "COMPLETE")} className="px-6 py-3 font-black text-sm text-white bg-emerald-600 border-b-4 border-emerald-800 active:border-b-0 rounded-xl tracking-wider cursor-pointer transform active:translate-y-1 transition-all">
+                              MARK RETURNED
+                            </button>
+                          )}
+                          <button onClick={() => deleteActiveBookingLocally(b.id)} className="p-3 text-slate-400 hover:text-[var(--brand-danger)] transition-colors cursor-pointer"><Trash2 className="w-5 h-5" /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-2xl font-black text-slate-700 flex items-center gap-2"><Archive className="text-slate-400 w-6 h-6" /> BOOKING ARCHIVE LOGS</h3>
+            <div className="bg-white border-4 border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+              {historyBookings.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-base font-bold bg-white">Historical logs are currently blank.</div>
+              ) : (
+                <div className="divide-y-4 divide-slate-100 bg-slate-50/50">
+                  {historyBookings.map((h) => (
+                    <div key={h.id} className="p-5 flex justify-between items-center text-base font-semibold opacity-90">
+                      <div>
+                        <span className="font-black text-slate-800 text-lg">{h.customer_name}</span>
+                        <p className="text-slate-400 font-bold text-sm">Vehicle Logged: {vehicles.find(v => v.id === h.vehicle_id)?.name}</p>
+                        <p className="text-xs text-slate-400 font-black mt-1">{formatToReadableDate(h.start_date)} to {formatToReadableDate(h.end_date)}</p>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="bg-slate-100 text-slate-600 font-black px-3 py-1.5 rounded-xl border-2 border-slate-300 text-xs tracking-wider uppercase">RETURN COMPLETED</span>
+                        <button onClick={() => deleteArchivedBookingLocally(h.id)} className="p-2 text-slate-400 hover:text-[var(--brand-danger)] transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-2xl font-black text-slate-700 flex items-center gap-2"><Calendar className="text-slate-700 w-6 h-6" /> VEHICLE AVAILABILITY</h3>
+          <div className="bg-white border-4 border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+            
+            <div>
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Select Active Vehicle</label>
+              <select 
+                className="w-full border-4 border-slate-200 p-3 rounded-xl font-black text-base bg-slate-50 text-slate-700 outline-none focus:border-[var(--brand-main)] transition-colors"
+                value={selectedVehicleId}
+                onChange={e => setSelectedVehicleId(e.target.value)}
+              >
+                {vehicles.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between bg-slate-100 p-2 rounded-xl border-2 border-slate-200">
+              <button onClick={handlePrevMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors bg-white shadow-sm border-2 border-slate-200 cursor-pointer"><ChevronLeft className="w-5 h-5 text-slate-600" /></button>
+              <div className="text-center font-black text-sm text-slate-700 uppercase tracking-wider">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</div>
+              <button onClick={handleNextMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors bg-white shadow-sm border-2 border-slate-200 cursor-pointer"><ChevronRight className="w-5 h-5 text-slate-600" /></button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1 text-center text-xs font-black text-slate-400">
+              <span>SU</span><span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1.5">
+              {monthDaysArray.map((dateStr, index) => {
+                const dayNum = index + 1;
+                const isBlocked = blockedDates.includes(dateStr);
+                return (
+                  <button
+                    key={dateStr}
+                    onClick={() => toggleDateBlockout(dateStr)}
+                    style={{
+                      backgroundColor: isBlocked ? 'var(--brand-danger)' : 'var(--brand-main)',
+                      borderColor: isBlocked ? 'var(--brand-danger-dark)' : '#166534',
+                      color: '#ffffff'
+                    }}
+                    className="h-10 w-full rounded-xl font-black text-sm flex flex-col items-center justify-center border-b-4 active:border-b-0 active:translate-y-1 transition-all duration-75 cursor-pointer shadow-sm"
+                  >
+                    <span>{dayNum}</span>
+                  </button>
+                );
+              })}
+            </div>
+            
+            <div className="text-xs font-bold text-slate-400 flex items-start gap-2 bg-slate-50 p-4 rounded-xl border-2 border-slate-200 leading-relaxed">
+              <AlertCircle className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+              <span>Green squares are set as available. Tap individual calendar days to toggle specific dates to Red (Unavailable).</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+export default Admin;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---------------App.jsx---------------
+
+
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { RentalProvider } from './context/RentalContext';
+import Home from './pages/Home';
+import Fleet from './pages/Fleet';
+import Admin from './pages/Admin';
+
+function App() {
+  return (
+    <RentalProvider>
+      <Router>
+        <div className="min-h-screen bg-slate-50 antialiased">
+          {/* Main layout container with padding adjusted since sidebars are dropped */}
+          <main className="min-h-screen py-8">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/fleet" element={<Fleet />} />
+              <Route path="/hubert-secure-operations" element={<Admin />} />
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </RentalProvider>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+---------------index.css---------------
+
+
+
+@import "tailwindcss";
+
+:root {
+  --brand-main: #15803d;       /* Vibrant Emerald Green */
+  --brand-light: #f0fdf4;      /* Soft Backdrop Tint */
+  --brand-text: #166534;       /* Deep Forest Green Typography */
+  --brand-danger: #ea2b2b;     /* True Duolingo High-Visibility Red */
+  --brand-danger-dark: #b91c1c;
+  --gray-border: #e2e8f0;
+  --gray-bg: #f8fafc;
+}
+
+body {
+  background-color: var(--gray-bg);
+  color: #1e293b;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* 3D Dynamic Duolingo Style Button Overrides */
+.duo-btn-primary {
+  background-color: var(--brand-main) !important;
+  border-bottom: 4px solid #166534 !important;
+  color: #ffffff !important;
+  transition: all 0.1s ease;
+}
+.duo-btn-primary:active {
+  border-bottom-width: 0px !important;
+  transform: translateY(4px) !important;
+}
+
+.duo-btn-danger {
+  background-color: var(--brand-danger) !important;
+  border-bottom: 4px solid var(--brand-danger-dark) !important;
+  color: #ffffff !important;
+  transition: all 0.1s ease;
+}
+.duo-btn-danger:active {
+  border-bottom-width: 0px !important;
+  transform: translateY(4px) !important;
+}
+
+/* Micro-Transitions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+
+
+
+
+
+
+---------------RentalContext.jsx---------------
+
+
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+const RentalContext = createContext();
+const API_BASE_URL = "http://127.0.0.1:8000/api";
+
+export function RentalProvider({ children }) {
+  const [vehicles, setVehicles] = useState([]);
+  const [activeBookings, setActiveBookings] = useState([]);
+  const [historyBookings, setHistoryBookings] = useState([]);
+
+  // 1. Fetch the live fleet inventory on app startup
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/vehicles`)
+      .then(res => res.json())
+      .then(data => setVehicles(data))
+      .catch(err => console.error("Error fetching vehicles:", err));
+  }, []);
+
+  // 2. Fetch admin dashboard queues dynamically
+  const refreshAdminData = () => {
+    fetch(`${API_BASE_URL}/admin/bookings`)
+      .then(res => res.json())
+      .then(data => {
+        setActiveBookings(data.active || []);
+        setHistoryBookings(data.history || []);
+      })
+      .catch(err => console.error("Error fetching admin bookings:", err));
+  };
+
+  // 3. Check dynamic date blockouts against the live server database
+  const checkVehicleAvailability = async (vehicleId, startStr, endStr) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/availability/${vehicleId}`);
+      const blockedDates = await res.json(); // Array of "YYYY-MM-DD" strings
+
+      let current = new Date(startStr);
+      const end = new Date(endStr);
+
+      while (current <= end) {
+        const dateString = current.toISOString().split('T')[0];
+        if (blockedDates.includes(dateString)) {
+          return false; // Found a matching blocked date row in SQLite!
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      return true;
+    } catch (err) {
+      console.error("Availability check failed:", err);
+      return false;
+    }
+  };
+
+  return (
+    <RentalContext.Provider value={{
+      vehicles,
+      activeBookings,
+      historyBookings,
+      refreshAdminData,
+      checkVehicleAvailability,
+      API_BASE_URL
+    }}>
+      {children}
+    </RentalContext.Provider>
+  );
+}
+
+export const useRental = () => useContext(RentalContext);
+
+
+
+
+
+---------------Navbar.jsx---------------
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Car, LayoutDashboard, Bike } from 'lucide-react';
+
+function Navbar() {
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          
+          {/* Logo Brand Section */}
+          <Link to="/" className="flex items-center space-x-2 text-xl font-extrabold text-amber-500">
+            <Car className="w-6 h-6" />
+            <span>ZEUS RENTALS</span>
+          </Link>
+
+          {/* Navigation Links */}
+          <div className="flex space-x-8">
+            <Link to="/" className="text-slate-300 hover:text-amber-500 font-medium transition-colors flex items-center space-x-1">
+              <Bike className="w-4 h-4" />
+              <span>Home</span>
+            </Link>
+            <Link to="/fleet" className="text-slate-300 hover:text-amber-500 font-medium transition-colors flex items-center space-x-1">
+              <Car className="w-4 h-4" />
+              <span>Browse Fleet</span>
+            </Link>
+            <Link to="/admin" className="text-slate-400 hover:text-amber-500 font-medium transition-colors flex items-center space-x-1 border-l border-slate-700 pl-4">
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Hubert Admin</span>
+            </Link>
+          </div>
+
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+export default Navbar;
+
+
+
+
+
+
+
+---------------BACKEND---------------
+---------------database.py---------------
+
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# 1. Locate the local database file path
+SQLALCHEMY_DATABASE_URL = "sqlite:///./zeus_rentals.db"
+
+# 2. Fire up the database connection engine
+# Note: connect_args={"check_same_thread": False} is required only for SQLite
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+
+# 3. Create a session factory to handle queries
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 4. Define the base class that our tables will inherit from
+Base = declarative_base()
+
+# 5. Dependency to safely open and close database connections per request
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+
+
+
+---------------main.py---------------
+
+
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from typing import List
+from pydantic import BaseModel
+
+import models
+from database import engine, get_db
+
+# Automatically build the database structures if they don't exist yet
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Zeus Car & Bike Rentals Engine")
+
+# Crucial Security Layer: Allow your React app (running on localhost:5173) to talk to Python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- PYDANTIC SCHEMAS FOR DATA VALIDATION ---
+class BookingCreate(BaseModel):
+    vehicle_id: str
+    customer_name: str
+    customer_phone: str
+    customer_address: str
+    start_date: str
+    end_date: str
+
+class DateToggle(BaseModel):
+    vehicle_id: str
+    date_string: str
+
+# --- 🛠️ SEED FUNCTION TO POPULATE INVENTORY ---
+@app.on_event("startup")
+def seed_inventory():
+    db = next(get_db())
+    if db.query(models.VehicleModel).count() == 0:
+        inventory = [
+            models.VehicleModel(id="v1", name="Honda Activa 6G", type="Scooty", price=500),
+            models.VehicleModel(id="v2", name="Suzuki Access 125", type="Scooty", price=600),
+            models.VehicleModel(id="v3", name="Maruti Swift Wagon", type="Car", price=2000),
+            models.VehicleModel(id="v4", name="Hyundai i20 Turbo", type="Car", price=2500),
+        ]
+        db.add_all(inventory)
+        db.commit()
+
+# --- 🌐 CUSTOMER FACING API ENDPOINTS ---
+
+@app.get("/api/vehicles")
+def get_fleet(db: Session = Depends(get_db)):
+    return db.query(models.VehicleModel).all()
+
+@app.get("/api/availability/{vehicle_id}")
+def get_blocked_dates(vehicle_id: str, db: Session = Depends(get_db)):
+    dates = db.query(models.BlockedDateModel).filter(models.BlockedDateModel.vehicle_id == vehicle_id).all()
+    return [d.date_string for d in dates]
+
+@app.post("/api/bookings")
+def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
+    # 1. Double check database blockouts to prevent concurrent bookings
+    conflicts = db.query(models.BlockedDateModel).filter(
+        models.BlockedDateModel.vehicle_id == booking.vehicle_id,
+        models.BlockedDateModel.date_string.between(booking.start_date, booking.end_date)
+    ).first()
+    
+    if conflicts:
+        raise HTTPException(status_code=400, detail="Dates are locked out!")
+
+    # 2. Write new entry
+    new_booking = models.BookingModel(**booking.dict())
+    db.add(new_booking)
+    db.commit()
+    db.refresh(new_booking)
+    return {"message": "Success", "booking_id": new_booking.id}
+
+# --- 👑 HUBERT SECURE OPERATIONS ENDPOINTS ---
+
+@app.get("/api/admin/bookings")
+def get_admin_bookings(db: Session = Depends(get_db)):
+    active = db.query(models.BookingModel).filter(models.BookingModel.status != "Returned Successfully").all()
+    history = db.query(models.BookingModel).filter(models.BookingModel.status == "Returned Successfully").all()
+    return {"active": active, "history": history}
+
+@app.post("/api/admin/toggle-date")
+def toggle_date(data: DateToggle, db: Session = Depends(get_db)):
+    existing = db.query(models.BlockedDateModel).filter(
+        models.BlockedDateModel.vehicle_id == data.vehicle_id,
+        models.BlockedDateModel.date_string == data.date_string
+    ).first()
+
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return {"status": "unblocked"}
+    else:
+        new_block = models.BlockedDateModel(vehicle_id=data.vehicle_id, date_string=data.date_string)
+        db.add(new_block)
+        db.commit()
+        return {"status": "blocked"}
+
+@app.post("/api/admin/bookings/{booking_id}/action")
+def update_booking_status(booking_id: int, action: str, db: Session = Depends(get_db)):
+    booking = db.query(models.BookingModel).filter(models.BookingModel.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking missing")
+        
+    if action == "APPROVE":
+        booking.status = "Active Transit"
+    elif action == "COMPLETE":
+        booking.status = "Returned Successfully"
+    elif action == "DENY":
+        db.delete(booking)
+        
+    db.commit()
+    return {"status": "updated"}
+
+
+
+
+
+
+---------------models.py---------------
+
+from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from database import Base
+
+class VehicleModel(Base):
+    __tablename__ = "vehicles"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    type = Column(String, nullable=False) # "Scooty" or "Car"
+    price = Column(Integer, nullable=False)
+
+class BlockedDateModel(Base):
+    __tablename__ = "blocked_dates"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    vehicle_id = Column(String, ForeignKey("vehicles.id"), nullable=False)
+    date_string = Column(String, nullable=False) # Format: "YYYY-MM-DD"
+
+class BookingModel(Base):
+    __tablename__ = "bookings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    vehicle_id = Column(String, ForeignKey("vehicles.id"), nullable=False)
+    customer_name = Column(String, nullable=False)
+    customer_phone = Column(String, nullable=False)
+    customer_address = Column(String, nullable=False)
+    start_date = Column(String, nullable=False)
+    end_date = Column(String, nullable=False)
+    status = Column(String, default="Pending Verification") # "Pending Verification", "Active Transit", "Returned Successfully"

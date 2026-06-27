@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --brand-main: #15803d;       /* Vibrant Emerald Green */
+  --brand-light: #f0fdf4;      /* Soft Backdrop Tint */
+  --brand-text: #166534;       /* Deep Forest Green Typography */
+  --brand-danger: #ea2b2b;     /* True Duolingo High-Visibility Red */
+  --brand-danger-dark: #b91c1c;
+  --gray-border: #e2e8f0;
+  --gray-bg: #f8fafc;
+}
+
+body {
+  background-color: var(--gray-bg);
+  color: #1e293b;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* 3D Dynamic Duolingo Style Button Overrides */
+.duo-btn-primary {
+  background-color: var(--brand-main) !important;
+  border-bottom: 4px solid #166534 !important;
+  color: #ffffff !important;
+  transition: all 0.1s ease;
+}
+.duo-btn-primary:active {
+  border-bottom-width: 0px !important;
+  transform: translateY(4px) !important;
+}
+
+.duo-btn-danger {
+  background-color: var(--brand-danger) !important;
+  border-bottom: 4px solid var(--brand-danger-dark) !important;
+  color: #ffffff !important;
+  transition: all 0.1s ease;
+}
+.duo-btn-danger:active {
+  border-bottom-width: 0px !important;
+  transform: translateY(4px) !important;
+}
+
+/* Micro-Transitions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
