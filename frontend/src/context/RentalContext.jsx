@@ -10,7 +10,7 @@ export function RentalProvider({ children }) {
 
   // 1. Fetch the live fleet inventory on app startup
   useEffect(() => {
-    fetch(`${API_BASE_URL}/vehicles`)
+    fetch(`${API_BASE_URL}/api/vehicles`) //  Added /api
       .then(res => res.json())
       .then(data => setVehicles(data))
       .catch(err => console.error("Error fetching vehicles:", err));
@@ -18,7 +18,7 @@ export function RentalProvider({ children }) {
 
   // 2. Fetch admin dashboard queues dynamically
   const refreshAdminData = () => {
-    fetch(`${API_BASE_URL}/admin/bookings`)
+    fetch(`${API_BASE_URL}/api/admin/bookings`) //  Added /api
       .then(res => res.json())
       .then(data => {
         setActiveBookings(data.active || []);
@@ -30,7 +30,7 @@ export function RentalProvider({ children }) {
   // 3. Check dynamic date blockouts against the live server database
   const checkVehicleAvailability = async (vehicleId, startStr, endStr) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/availability/${vehicleId}`);
+      const res = await fetch(`${API_BASE_URL}/api/availability/${vehicleId}`); //  Added /api
       const blockedDates = await res.json(); // Array of "YYYY-MM-DD" strings
 
       let current = new Date(startStr);
