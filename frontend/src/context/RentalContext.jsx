@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const RentalContext = createContext();
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = "https://zeus-rentals-backend.onrender.com";
 
 export function RentalProvider({ children }) {
   const [vehicles, setVehicles] = useState([]);
