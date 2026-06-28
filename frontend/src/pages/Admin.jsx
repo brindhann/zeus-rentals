@@ -17,7 +17,7 @@ function Admin() {
 
   useEffect(() => {
     if (!selectedVehicleId) return;
-    fetch(`${API_BASE_URL}/availability/${selectedVehicleId}`)
+    fetch(`${API_BASE_URL}/api/availability/${selectedVehicleId}`)
       .then(res => res.json())
       .then(data => setBlockedDates(data))
       .catch(err => console.error(err));
@@ -57,7 +57,7 @@ function Admin() {
 
   const toggleDateBlockout = async (dateStr) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/toggle-date`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/toggle-date`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vehicle_id: selectedVehicleId, date_string: dateStr })
@@ -77,7 +77,7 @@ function Admin() {
 
   const handleWorkflowAction = async (bookingId, actionStr) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/bookings/${bookingId}/action?action=${actionStr}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/bookings/${bookingId}/action?action=${actionStr}`, {
         method: "POST"
       });
       if (res.ok) {

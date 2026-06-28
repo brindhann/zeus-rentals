@@ -24,7 +24,7 @@ function Navbar() {
               <Car className="w-4 h-4" />
               <span>Browse Fleet</span>
             </Link>
-            <Link to="/admin" className="text-slate-400 hover:text-amber-500 font-medium transition-colors flex items-center space-x-1 border-l border-slate-700 pl-4">
+            <Link to="/hubert-secure-operations" className="text-slate-400 hover:text-amber-500 font-medium transition-colors flex items-center space-x-1 border-l border-slate-700 pl-4">
               <LayoutDashboard className="w-4 h-4" />
               <span>Hubert Admin</span>
             </Link>
