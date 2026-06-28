@@ -85,6 +85,9 @@ function Fleet() {
   };
 
   const finalizeBooking = async () => {
+    // NOTE: files (govtId, license) are validated on the frontend but not sent to the backend.
+    // If you need to store them server-side in the future, switch this to a FormData upload
+    // instead of JSON, and update the FastAPI endpoint to accept multipart/form-data.
     try {
       const response = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: "POST",
@@ -130,28 +133,34 @@ function Fleet() {
 
         {/* Vehicle Selection Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {vehicles.map((v) => (
-            <div key={v.id} className="bg-white border-4 border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-[var(--brand-main)] hover:-translate-y-1 transition-all duration-300 shadow-sm group">
-              <div>
-                <div className="flex justify-center text-slate-300 group-hover:text-[var(--brand-main)] transition-colors duration-300 my-6">
-                  {v.type === "Car" ? <Car className="w-16 h-16 stroke-[1.5]" /> : <Bike className="w-16 h-16 stroke-[1.5]" />}
+          {vehicles.length === 0 ? (
+            <p className="col-span-4 text-center text-slate-400 font-bold py-12">
+              Loading vehicles... (or backend may be offline)
+            </p>
+          ) : (
+            vehicles.map((v) => (
+              <div key={v.id} className="bg-white border-4 border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:border-[var(--brand-main)] hover:-translate-y-1 transition-all duration-300 shadow-sm group">
+                <div>
+                  <div className="flex justify-center text-slate-300 group-hover:text-[var(--brand-main)] transition-colors duration-300 my-6">
+                    {v.type === "Car" ? <Car className="w-16 h-16 stroke-[1.5]" /> : <Bike className="w-16 h-16 stroke-[1.5]" />}
+                  </div>
+                  <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase border-2 border-slate-200">
+                    {v.type}
+                  </span>
+                  <h3 className="text-2xl font-black text-slate-800 mt-2">{v.name}</h3>
                 </div>
-                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase border-2 border-slate-200">
-                  {v.type}
-                </span>
-                <h3 className="text-2xl font-black text-slate-800 mt-2">{v.name}</h3>
-              </div>
-              <div className="mt-6 space-y-4">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-slate-400 font-bold text-xs uppercase tracking-wide">Rate</span>
-                  <span className="text-2xl font-black text-slate-800">₹{v.price}<span className="text-xs text-slate-400 font-bold">/day</span></span>
+                <div className="mt-6 space-y-4">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-slate-400 font-bold text-xs uppercase tracking-wide">Rate</span>
+                    <span className="text-2xl font-black text-slate-800">₹{v.price}<span className="text-xs text-slate-400 font-bold">/day</span></span>
+                  </div>
+                  <button onClick={() => handleOpenModal(v)} className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
+                    SELECT RIDE
+                  </button>
                 </div>
-                <button onClick={() => handleOpenModal(v)} className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
-                  SELECT RIDE
-                </button>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Interactive Booking Modal Context */}
@@ -228,8 +237,13 @@ function Fleet() {
                       <input type="file" className="hidden" onChange={e => setFiles({...files, license: e.target.files[0] || null})} />
                     </label>
                   </div>
+                  {(errors.govtId || errors.license) && (
+                    <p className="text-[var(--brand-danger)] font-black text-xs mt-1 ml-1">
+                      {errors.govtId || errors.license}
+                    </p>
+                  )}
                   <button type="submit" className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
-                    Proceed to payment
+                    PROCEED TO TERMS
                   </button>
                 </form>
               )}
@@ -270,8 +284,11 @@ function Fleet() {
                     <div className="flex justify-between text-[var(--brand-main)] bg-emerald-50/50 p-2 rounded-xl border-2 border-emerald-100"><span>Advance to be Paid (25%):</span><span>₹{advanceAmount}</span></div>
                     <div className="flex justify-between text-slate-600"><span>Remaining Amount on Pickup:</span><span className="text-slate-900">₹{remainingAmount}</span></div>
                   </div>
+                  {/* FIX: Changed label from "PROCEED TO PAYMENT" to "CONFIRM BOOKING"
+                      since there is no actual payment gateway — finalizeBooking() goes 
+                      straight to the success screen. */}
                   <button onClick={finalizeBooking} className="w-full py-3.5 duo-btn-primary text-base tracking-wide font-black rounded-xl cursor-pointer">
-                    PROCEED TO PAYMENT
+                    CONFIRM BOOKING
                   </button>
                 </div>
               )}

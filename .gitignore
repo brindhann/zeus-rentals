@@ -1,7 +1,7 @@
 node_modules/
-.vite/
-dist/
-venvir/
-__pycache__/
-*.db
+frontend/node_modules/.vite/
+backend/venvir/
+backend/__pycache__/
+backend/*.db
 .env
+dist/
