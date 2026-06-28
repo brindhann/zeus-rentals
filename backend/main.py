@@ -15,7 +15,9 @@ app = FastAPI(title="Zeus Car & Bike Rentals Engine")
 # Crucial Security Layer: Allow your React app (running on localhost:5173) to talk to Python
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173",
+                   "https://zeus-rentals.vercel.app/"
+                   ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
