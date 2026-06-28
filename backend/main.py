@@ -16,7 +16,7 @@ app = FastAPI(title="Zeus Car & Bike Rentals Engine")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173",
-                   "https://zeus-rentals.vercel.app/"
+                   "https://zeus-rentals.vercel.app"
                    ],
     allow_credentials=True,
     allow_methods=["*"],
